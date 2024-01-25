@@ -5,28 +5,30 @@ from django.db import models
 class User(AbstractUser):
     email = models.EmailField(
         max_length=254,
-        blank=True,
         unique=True,
         verbose_name='Электронная почта'
     )
     username = models.CharField(
         max_length=150,
-        blank=True,
         unique=True,
         verbose_name='Имя пользователя'
     )
     first_name = models.CharField(
         max_length=150,
-        blank=True,
         verbose_name='Имя'
     )
     last_name = models.CharField(
         max_length=150,
-        blank=True,
         verbose_name='Фамилия'
     )
     confirmation_code = models.TextField(
+        blank=True,
         verbose_name='Код подтверждения'
+    )
+    is_subscribed = models.BooleanField(
+        blank=True,
+        default=False,
+        verbose_name='Подписан'
     )
 
     class Meta:

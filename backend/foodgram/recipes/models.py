@@ -7,13 +7,11 @@ class Ingredient(models.Model):
     """Модель ингредиентов."""
     name = models.CharField(
         max_length=200,
-        blank=True,
         unique=True,
         verbose_name='Название ингредиента'
     )
     measurement_unit = models.CharField(
         max_length=200,
-        blank=True,
         verbose_name='Единица измерения'
     )
 
@@ -30,19 +28,15 @@ class Tag(models.Model):
     """Модель тегов."""
     name = models.CharField(
         max_length=200,
-        blank=True,
         unique=True,
         verbose_name='Название тега'
     )
     color = models.CharField(
         max_length=7,
-        blank=True,
-        unique=True,
         verbose_name='Цвет тега',
     )
     slug = models.SlugField(
         max_length=200,
-        blank=True,
         unique=True,
         verbose_name='Слаг тэга'
     )
@@ -66,23 +60,20 @@ class Recipe(models.Model):
     )
     name = models.CharField(
         max_length=200,
-        blank=True,
         verbose_name='Название рецепта'
     )
     text = models.CharField(
         max_length=254,         # не обязательное поле
-        blank=True,
         verbose_name='Описание рецепта'
     )
     cooking_time = models.IntegerField(
-        blank=True,
         verbose_name='Время приготовления (в минутах)'
     )
     image = models.ImageField(
         upload_to='recipes/images/',
-        blank=True,
         null=True,
         default=None,
+        blank=True,
         verbose_name='Фото'
     )
     pub_date = models.DateTimeField(
@@ -98,9 +89,9 @@ class Recipe(models.Model):
             'ingredient',
         ),
     )
-    tag = models.ManyToManyField(
+    tags = models.ManyToManyField(
         Tag,
-        verbose_name='Тег'
+        verbose_name='Теги'
     )
 
     is_favorited = models.BooleanField(
@@ -146,19 +137,6 @@ class RecipeIngredient(models.Model):
         # ordering = ['-pub_date',]
         verbose_name = 'Ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецепте'
-#
-# class RecipeTag(models.Model):
-#     """Промежуточная модель для связи рецепта и тега."""
-#     tag = models.ForeignKey(
-#         Tag,
-#         on_delete=models.CASCADE,
-#         verbose_name='Тег'
-#     )
-#     recipe = models.ForeignKey(
-#         Recipe,
-#         on_delete=models.CASCADE,
-#         verbose_name='Рецепт'
-#     )
 
 
 class Favorite(models.Model):
@@ -174,9 +152,29 @@ class Favorite(models.Model):
     )
 
     class Meta:
-        # ordering = ['-pub_date',]
         verbose_name = 'Избранный рецепт'
         verbose_name_plural = 'Избранные рецепты'
 
     def __str__(self):
-        return f"{self.recipe.name}"
+        return f'{self.recipe.name}'
+
+
+class ShoppingCart(models.Model):
+    """Модель корзины."""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Владелец корзины'
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        verbose_name='Рецепт в корзине'
+    )
+
+    class Meta:
+        verbose_name = 'Корзина для покупок'
+        verbose_name_plural = 'Корзины для покупок'
+
+    def __str__(self):
+        return f'Пользователь "{self.user.name}" добавил {self.recipe} в Корзину'
