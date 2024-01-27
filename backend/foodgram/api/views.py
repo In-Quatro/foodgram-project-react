@@ -1,14 +1,15 @@
 from rest_framework.views import APIView
-from rest_framework import viewsets, mixins
+from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
 from api.serializers import (
     UserReadSerializer,
-    BaseUserSerializer,
+    UserSerializer,
     RecipeIngredientSerializer,
-    RecipeSerializer,
+    RecipeCreateSerializer,
     TagSerializer,
     IngredientSerializer,
     SubscriptionSerializer,
+    SetPasswordSerializer,
 )
 from rest_framework.response import Response
 from users.models import User, Subscription
@@ -31,28 +32,33 @@ class ReadOnlyMixins(mixins.RetrieveModelMixin,
 class UsersViewSet(viewsets.ModelViewSet):
     """ViewSet для Пользователя."""
     queryset = User.objects.all()
-    # serializer_class = UserReadSerializer
+    # serializer_class = UserGetSerializer
 
     def get_serializer_class(self):
         if self.action in ('retrieve', 'list'):
             return UserReadSerializer
-        return BaseUserSerializer
+        return UserSerializer
 
-    @action(methods=['get'], detail=False)
-    def me(self, request, pk=2):
-        user = User.objects.get(pk=pk)
-        serializator = BaseUserSerializer(user)
-        return Response(serializator.data)
+    @action(methods=['get'],
+            detail=False,)
+    def me(self, request):
+        serializer = UserReadSerializer(request.user)
+        return Response(serializer.data)
 
-
-# class RecipeIngredientViewSet(viewsets.ModelViewSet):
-#     queryset = RecipeIngredient.objects.all()
-#     serializer_class = RecipeIngredientSerializer
+    @action(methods=['post'],
+            detail=False,)
+    def set_password(self, request):
+        serializer = SetPasswordSerializer(request.user, data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+        return Response({'detail': 'Пароль успешно изменен!'},
+                        status=status.HTTP_204_NO_CONTENT)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
+    """ViewSet для Рецептов."""
     queryset = Recipe.objects.all()
-    serializer_class = RecipeSerializer
+    serializer_class = RecipeCreateSerializer
 
 
 class TagViewSet(viewsets.ModelViewSet):

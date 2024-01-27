@@ -4,7 +4,7 @@ from users.models import User
 
 
 class Ingredient(models.Model):
-    """Модель ингредиентов."""
+    """Модель для Ингредиентов."""
     name = models.CharField(
         max_length=200,
         unique=True,
@@ -25,7 +25,7 @@ class Ingredient(models.Model):
 
 
 class Tag(models.Model):
-    """Модель тегов."""
+    """Модель для Тегов."""
     name = models.CharField(
         max_length=200,
         unique=True,
@@ -50,11 +50,10 @@ class Tag(models.Model):
 
 
 class Recipe(models.Model):
-    """Модель рецептов."""
+    """Модель для Рецептов."""
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        blank=True,
         related_name='recipes',
         verbose_name='Автор рецепта'
     )
@@ -115,28 +114,29 @@ class Recipe(models.Model):
 
 
 class RecipeIngredient(models.Model):
-    """Промежуточная модель для связи рецепта и ингредиента."""
-    amount = models.PositiveIntegerField(
-        verbose_name='Количество ингредиента'
+    """Промежуточная модель для связи Recipe и Ingredient."""
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='recipes',
+        verbose_name='Рецепт'
     )
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
+        related_name='ingredients',
         verbose_name='Ингредиент'
     )
-    recipe = models.ForeignKey(
-        Recipe,
-        on_delete=models.CASCADE,
-        verbose_name='Рецепт'
+    amount = models.PositiveIntegerField(
+        verbose_name='Количество ингредиента'
     )
 
     def __str__(self):
         return f"{self.ingredient} в {self.recipe}"
 
     class Meta:
-        # ordering = ['-pub_date',]
         verbose_name = 'Ингредиент в рецепте'
-        verbose_name_plural = 'Ингредиенты в рецепте'
+        verbose_name_plural = 'Ингредиенты в рецептах'
 
 
 class Favorite(models.Model):

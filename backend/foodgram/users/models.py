@@ -21,10 +21,6 @@ class User(AbstractUser):
         max_length=150,
         verbose_name='Фамилия'
     )
-    confirmation_code = models.TextField(
-        blank=True,
-        verbose_name='Код подтверждения'
-    )
     is_subscribed = models.BooleanField(
         blank=True,
         default=False,
