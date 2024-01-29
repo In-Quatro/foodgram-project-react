@@ -2,7 +2,7 @@ from rest_framework import serializers
 from djoser.serializers import UserCreateSerializer, UserSerializer
 
 from users.models import User, Subscription
-from recipes.models import RecipeIngredient, Recipe, Tag, Ingredient
+from recipes.models import RecipeIngredient, Recipe, Tag, Ingredient, Favorite
 from drf_base64.fields import Base64ImageField
 
 
@@ -116,10 +116,10 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     author = UserReadSerializer(
         read_only=True,
     )
-    ingredients = RecipeIngredientSerializer(
+
+    ingredients = IngredientSerializer(
         many=True,
         read_only=True,
-        source='recipies',
     )
     # is_favorited = serializers.SerializerMethodField()
     # is_in_shopping_cart = serializers.SerializerMethodField()
@@ -203,6 +203,20 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         self.tags_ingredients(recipe, tags, ingredients)
         return recipe
 
+    def update(self, instance, validated_data):
+        """Изменение Рецепта."""
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
+        instance.ingredients.clear()
+        instance.name = validated_data.get('name', instance.name)
+        instance.image = validated_data.get('image', instance.image)
+        instance.text = validated_data.get('text', instance.text)
+        instance.cooking_time = validated_data.get(
+            'cooking_time', instance.cooking_time)
+        self.tags_ingredients(instance, tags, ingredients)
+        instance.save()
+        return instance
+
     def to_representation(self, instance):
         request = self.context.get('request')
         context = {'request': request}
@@ -213,3 +227,18 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = '__all__'
+
+
+class RecipeShopingFavoriteSerializer(serializers.ModelSerializer):
+    name = serializers.ReadOnlyField()
+    image = Base64ImageField(read_only=True)
+    cooking_time = serializers.ReadOnlyField()
+
+    class Meta:
+        model = Recipe
+        fields = (
+            'id',
+            'name',
+            'image',
+            'cooking_time',
+        )
