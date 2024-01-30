@@ -20,6 +20,8 @@ from recipes.models import (
     Tag,
     Ingredient,
     Favorite,
+    ShoppingCart,
+    RecipeIngredient,
 )
 
 
@@ -65,39 +67,71 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return RecipeReadSerializer
         return RecipeCreateSerializer
 
-    @action(methods=['post', 'delete'],
-            detail=True,
-            permission_classes=(IsAuthenticated,)
-    )
-    def favorite(self, request, pk=None):
+    def interaction_recipe(self, request, pk, model):
+        if model.__name__ == 'Favorite':
+            message_add, message_del = 'Избранном', 'Избранного'
+        elif model.__name__ == 'ShoppingCart':
+            message_add, message_del = 'Корзине', 'Корзины'
         recipe = get_object_or_404(Recipe, id=pk)
-        favorite = Favorite.objects.filter(
+        presence_object = model.objects.filter(
             recipe=recipe,
             user=request.user).exists()
         if request.method == 'POST':
-            if favorite:
+            if presence_object:
                 return Response(
-                    {'errors': 'Данный рецепт уже в избранном!'},
+                    {'errors': f'Данный рецепт уже в {message_add}!'},
                     status=status.HTTP_400_BAD_REQUEST)
             serializer = RecipeShopingFavoriteSerializer(
                 recipe,
                 data=request.data,
                 context={'request': request})
             serializer.is_valid(raise_exception=True)
-            Favorite.objects.create(user=request.user, recipe=recipe)
+            model.objects.create(user=request.user, recipe=recipe)
             return Response(
                 serializer.data,
                 status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             delete_recipe = get_object_or_404(
-                Favorite,
+                model,
                 user=request.user,
                 recipe=recipe
             )
             delete_recipe.delete()
             return Response(
-                {'detail': 'Рецепт удален из избранного.'},
+                {'detail': f'Рецепт удален из {message_del}.'},
                 status=status.HTTP_204_NO_CONTENT)
+
+    @action(methods=['post', 'delete'],
+            detail=True,
+            permission_classes=(IsAuthenticated,))
+    def favorite(self, request, pk=None):
+        return self.interaction_recipe(request, pk, Favorite)
+
+    @action(methods=['post', 'delete'],
+            detail=True,
+            permission_classes=(IsAuthenticated,))
+    def shopping_cart(self, request, pk=None):
+        return self.interaction_recipe(request, pk, ShoppingCart)
+
+    @action(methods=['get'],
+            detail=False,
+            permission_classes=(IsAuthenticated,))
+    def download_shopping_cart(self, request):
+        objs = ShoppingCart.objects.filter(user=request.user)
+        ing = [obj.recipe_id for obj in objs]
+        print(ing)
+        ing_2 = []
+        for i in ing:
+            ing_2.append(RecipeIngredient.objects.filter(id=i).values())
+        print(ing_2)
+        ii = Ingredient.objects.filter(id=2).values('name')
+
+        print(list(ii))
+        # 'id': 1, 'recipe_id': 1, 'ingredient_id': 1, 'amount': 10
+
+        return Response(
+            {'detail': 111},
+            status=status.HTTP_200_OK)
 
 
 class TagViewSet(viewsets.ModelViewSet):
