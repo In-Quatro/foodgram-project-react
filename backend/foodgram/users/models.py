@@ -21,11 +21,11 @@ class User(AbstractUser):
         max_length=150,
         verbose_name='Фамилия'
     )
-    # is_subscribed = models.BooleanField(
-    #     blank=True,
-    #     default=False,
-    #     verbose_name='Подписан'
-    # )
+    is_subscribed = models.BooleanField(
+        blank=True,
+        default=False,
+        verbose_name='Подписан'
+    )
 
     class Meta:
         ordering = ['id']

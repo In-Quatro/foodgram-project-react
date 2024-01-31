@@ -252,12 +252,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return RecipeReadSerializer(instance, context=context).data
 
 
-class SubscriptionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Subscription
-        fields = '__all__'
-
-
 class RecipeShopingFavoriteSerializer(serializers.ModelSerializer):
     name = serializers.ReadOnlyField()
     image = Base64ImageField(read_only=True)
@@ -271,3 +265,53 @@ class RecipeShopingFavoriteSerializer(serializers.ModelSerializer):
             'image',
             'cooking_time',
         )
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    """Serializer для Подписки.
+
+        Разрешенные методы: [GET]
+        """
+    recipes = RecipeShopingFavoriteSerializer(many=True, read_only=True)
+    recipes_count = serializers.SerializerMethodField()
+    email = serializers.ReadOnlyField()
+    username = serializers.ReadOnlyField()
+    first_name = serializers.ReadOnlyField()
+    last_name = serializers.ReadOnlyField()
+    is_subscribed = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'recipes',
+            'recipes_count',
+        )
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if request and not request.user.is_anonymous:
+            return Subscription.objects.filter(
+                user=request.user,
+                author=obj).exists()
+        return False
+
+    def get_recipes(self, obj):
+        recipes = obj.recipes.all()
+        serializer = RecipeShopingFavoriteSerializer(
+            recipes,
+            many=True,
+            read_only=True
+        )
+        return serializer.data
+
+    def get_recipes_count(self, obj):
+        return obj.recipes.count()
+
+
+

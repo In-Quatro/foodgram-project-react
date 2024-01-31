@@ -43,19 +43,69 @@ class UsersViewSet(viewsets.ModelViewSet):
         return UserSerializer
 
     @action(methods=['get'],
-            detail=False)
+            detail=False,
+            permission_classes=(IsAuthenticated,))
     def me(self, request):
         serializer = UserReadSerializer(request.user)
         return Response(serializer.data)
 
     @action(methods=['post'],
-            detail=False,)
+            detail=False,
+            permission_classes=(IsAuthenticated,))
     def set_password(self, request):
         serializer = SetPasswordSerializer(request.user, data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
         return Response({'detail': 'Пароль успешно изменен!'},
                         status=status.HTTP_204_NO_CONTENT)
+
+    @action(methods=['get'],
+            detail=False,
+            permission_classes=(IsAuthenticated,))
+    def subscriptions(self, request):
+        subscribeed_by = User.objects.filter(subscribeed_by__user=request.user)
+        serializer = SubscriptionSerializer(
+            subscribeed_by,
+            many=True,
+            context={'request': request})
+        return Response(serializer.data)
+
+    @action(methods=['post', 'delete'],
+            detail=True,
+            permission_classes=(IsAuthenticated,))
+    def subscribe(self, request, pk=None):
+        author = get_object_or_404(User, id=pk)
+        subscribe = Subscription.objects.filter(
+            author=author,
+            user=request.user).exists()
+        if request.method == 'POST':
+            if subscribe:
+                return Response(
+                    {'errors': f'Вы уже подписаны на "{author}"'},
+                    status=status.HTTP_400_BAD_REQUEST)
+            serializer = SubscriptionSerializer(
+                author,
+                data=request.data,
+                context={'request': request})
+            serializer.is_valid(raise_exception=True)
+            Subscription.objects.create(user=request.user, author=author)
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED)
+        if request.method == 'DELETE':
+            if not subscribe:
+                return Response(
+                    {'detail': f'Вы не подписаны на "{author}".'},
+                    status=status.HTTP_400_BAD_REQUEST)
+            delete_subscribe = get_object_or_404(
+                Subscription,
+                user=request.user,
+                author=author
+            )
+            delete_subscribe.delete()
+            return Response(
+                {'detail': f'Вы отписались от "{author}".'},
+                status=status.HTTP_204_NO_CONTENT)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -148,7 +198,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post']
 
 
-class SubscriptionViewSet(viewsets.ModelViewSet):
-    """ViewSet для Подписки."""
-    queryset = Subscription.objects.all()
-    serializer_class = SubscriptionSerializer
+# class SubscriptionViewSet(viewsets.ModelViewSet):
+#     """ViewSet для Подписки."""
+#     queryset = Subscription.objects.all()
+#     serializer_class = SubscriptionSerializer
