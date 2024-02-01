@@ -13,8 +13,8 @@ from recipes.models import (
 from drf_base64.fields import Base64ImageField
 
 
-class UserReadSerializer(UserSerializer):
-    """Serializer для получения информации о пользователях."""
+class CustomUserReadSerializer(UserSerializer):
+    """Serializer для получения информации о Пользователях."""
     is_subscribed = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -37,11 +37,8 @@ class UserReadSerializer(UserSerializer):
         return False
 
 
-class UserSerializer(UserCreateSerializer):
-    """Serializer для создания Пользователей.
-
-    Разрешенные методы: [POST]
-    """
+class CustomUserSerializer(UserCreateSerializer):
+    """Serializer для создания Пользователя."""
     class Meta:
         model = User
         fields = (
@@ -55,18 +52,12 @@ class UserSerializer(UserCreateSerializer):
 
 
 class SetPasswordSerializer(serializers.Serializer):
-    """Serializer для изменения пароля текущего пользователя.
-
-    Разрешенные методы: [POST]
-    """
-    new_password = serializers.CharField(
-        required=True
-    )
-    current_password = serializers.CharField(
-        required=True
-    )
+    """Serializer для изменения пароля текущего пользователя."""
+    new_password = serializers.CharField(required=True)
+    current_password = serializers.CharField(required=True)
 
     def update(self, instance, validated_data):
+        """Изменение пароля."""
         current_password = validated_data['current_password']
         new_password = validated_data['new_password']
 
@@ -85,10 +76,7 @@ class SetPasswordSerializer(serializers.Serializer):
 
 
 class TagSerializer(serializers.ModelSerializer):
-    """Serializer для просмотра Тегов.
-
-    Разрешенные методы: [GET]
-    """
+    """Serializer для просмотра Тегов."""
     class Meta:
         model = Tag
         fields = '__all__'
@@ -105,9 +93,11 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-    """Serializer для Ингредиентов."""
-    id = serializers.ReadOnlyField(source='ingredient.id')
-    name = serializers.ReadOnlyField(source='ingredient.name')
+    """Serializer для получения Ингредиентов."""
+    id = serializers.ReadOnlyField(
+        source='ingredient.id')
+    name = serializers.ReadOnlyField(
+        source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(
         source='ingredient.measurement_unit')
 
@@ -122,14 +112,11 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 
 class RecipeReadSerializer(serializers.ModelSerializer):
-    """Serializer для получения списка рецептов.
-
-    Разрешенные методы: [GET]
-    """
+    """Serializer для получения списка рецептов."""
     tags = TagSerializer(
         many=True,
         read_only=True,)
-    author = UserReadSerializer(
+    author = CustomUserReadSerializer(
         read_only=True,)
     ingredients = IngredientSerializer(
         many=True,
@@ -183,19 +170,14 @@ class RecipeIngredientCreateSerializer(serializers.ModelSerializer):
 
 
 class RecipeCreateSerializer(serializers.ModelSerializer):
-    """Serializer для Рецептов.
-
-    Разрешенные методы: [POST, PATCH, DELETE]
-    """
+    """Serializer для создания, изменения и удаления Рецептов."""
     id = serializers.ReadOnlyField()
-    ingredients = RecipeIngredientCreateSerializer(
-        many=True,
-    )
     tags = serializers.PrimaryKeyRelatedField(
         many=True,
-        queryset=Tag.objects.all(),
+        queryset=Tag.objects.all()
     )
-    author = UserReadSerializer(read_only=True)
+    author = CustomUserReadSerializer(read_only=True)
+    ingredients = RecipeIngredientCreateSerializer(many=True)
     image = Base64ImageField()
 
     class Meta:
@@ -214,6 +196,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         )
 
     def tags_ingredients(self, recipe, tags, ingredients):
+        """Вспомогательный метод для создания записей в БД."""
         recipe.tags.set(tags)
         RecipeIngredient.objects.bulk_create(
             [RecipeIngredient(
@@ -252,7 +235,8 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return RecipeReadSerializer(instance, context=context).data
 
 
-class RecipeShopingFavoriteSerializer(serializers.ModelSerializer):
+class RecipeSerializer(serializers.ModelSerializer):
+    """Serializer для краткого отображения Рецепта."""
     name = serializers.ReadOnlyField()
     image = Base64ImageField(read_only=True)
     cooking_time = serializers.ReadOnlyField()
@@ -268,17 +252,14 @@ class RecipeShopingFavoriteSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    """Serializer для Подписки.
-
-        Разрешенные методы: [GET]
-        """
-    recipes = RecipeShopingFavoriteSerializer(many=True, read_only=True)
-    recipes_count = serializers.SerializerMethodField()
+    """Serializer для Подписок."""
     email = serializers.ReadOnlyField()
     username = serializers.ReadOnlyField()
     first_name = serializers.ReadOnlyField()
     last_name = serializers.ReadOnlyField()
     is_subscribed = serializers.SerializerMethodField()
+    recipes = RecipeSerializer(many=True, read_only=True)
+    recipes_count = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -303,7 +284,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def get_recipes(self, obj):
         recipes = obj.recipes.all()
-        serializer = RecipeShopingFavoriteSerializer(
+        serializer = RecipeSerializer(
             recipes,
             many=True,
             read_only=True
@@ -312,6 +293,3 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()
-
-
-
