@@ -4,7 +4,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from api.serializers import (
     CustomUserReadSerializer,
     CustomUserSerializer,
@@ -16,6 +16,7 @@ from api.serializers import (
     RecipeSerializer,
     RecipeReadSerializer,
 )
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from users.models import User, Subscription
 from recipes.models import (
@@ -31,6 +32,7 @@ from recipes.models import (
 class UsersViewSet(viewsets.ModelViewSet):
     """ViewSet для Пользователя."""
     queryset = User.objects.all()
+    # pagination_class = LimitOffsetPagination
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
@@ -58,15 +60,17 @@ class UsersViewSet(viewsets.ModelViewSet):
 
     @action(methods=['get'],
             detail=False,
-            permission_classes=(IsAuthenticated,))
+            permission_classes=(IsAuthenticated,),
+            )
     def subscriptions(self, request):
         """Просмотр своих подписок."""
         subscribeed_by = User.objects.filter(subscribeed_by__user=request.user)
+        pages = self.paginate_queryset(subscribeed_by)
         serializer = SubscriptionSerializer(
-            subscribeed_by,
+            pages,
             many=True,
             context={'request': request})
-        return Response(serializer.data)
+        return self.get_paginated_response(serializer.data)
 
     @action(methods=['post', 'delete'],
             detail=True,
@@ -115,6 +119,7 @@ class UsersViewSet(viewsets.ModelViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     """ViewSet для Рецептов."""
     queryset = Recipe.objects.all()
+    permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
@@ -205,7 +210,9 @@ class TagViewSet(viewsets.ModelViewSet):
     """ViewSet для Тега."""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    http_method_names = ['get']
+    # permission_classes = [IsAdminUser,]
+    http_method_names = ['get', 'post', 'patch', 'delete']
+    pagination_class = None
 
 
 class IngredientViewSet(viewsets.ModelViewSet):

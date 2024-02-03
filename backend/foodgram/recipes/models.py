@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.core.validators import MinValueValidator
 from users.models import User
 
 
@@ -7,7 +7,7 @@ class Ingredient(models.Model):
     """Модель для Ингредиентов."""
     name = models.CharField(
         max_length=200,
-        unique=True,
+        # unique=True,
         verbose_name='Название ингредиента'
     )
     measurement_unit = models.CharField(
@@ -66,7 +66,8 @@ class Recipe(models.Model):
         verbose_name='Описание рецепта'
     )
     cooking_time = models.IntegerField(
-        verbose_name='Время приготовления (в минутах)'
+        verbose_name='Время приготовления (в минутах)',
+        validators=[MinValueValidator(1)]
     )
     image = models.ImageField(
         upload_to='recipes/images/',
@@ -128,7 +129,8 @@ class RecipeIngredient(models.Model):
         verbose_name='Ингредиент'
     )
     amount = models.PositiveIntegerField(
-        verbose_name='Количество ингредиента'
+        verbose_name='Количество ингредиента',
+        validators=[MinValueValidator(1)]
     )
 
     def __str__(self):

@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from djoser.serializers import UserCreateSerializer, UserSerializer
 
@@ -160,6 +161,8 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 class RecipeIngredientCreateSerializer(serializers.ModelSerializer):
     """Serializer для создания Ингредиентов с их количеством."""
     id = serializers.IntegerField()
+    # id = serializers.PrimaryKeyRelatedField(
+    #     queryset=Ingredient.objects.all())
 
     class Meta:
         model = RecipeIngredient
@@ -174,10 +177,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField()
     tags = serializers.PrimaryKeyRelatedField(
         many=True,
-        queryset=Tag.objects.all()
+        queryset=Tag.objects.all(),
     )
     author = CustomUserReadSerializer(read_only=True)
-    ingredients = RecipeIngredientCreateSerializer(many=True)
+    ingredients = RecipeIngredientCreateSerializer(many=True,)
     image = Base64ImageField()
 
     class Meta:
@@ -194,6 +197,21 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             'text',
             'cooking_time',
         )
+
+    def validate(self, obj):
+        fields = [
+            'ingredients',
+            'tags',
+            'image',
+            'name',
+            'text',
+            'cooking_time'
+        ]
+        for field in fields:
+            if not obj.get(field):
+                raise serializers.ValidationError(
+                    f'Поле {field} обязательное и не может быть пустым!')
+        return obj
 
     def tags_ingredients(self, recipe, tags, ingredients):
         """Вспомогательный метод для создания записей в БД."""
