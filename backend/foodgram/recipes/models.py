@@ -7,7 +7,6 @@ class Ingredient(models.Model):
     """Модель для Ингредиентов."""
     name = models.CharField(
         max_length=200,
-        # unique=True,
         verbose_name='Название ингредиента'
     )
     measurement_unit = models.CharField(
@@ -145,11 +144,13 @@ class Favorite(models.Model):
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
+        related_name='favorite_recipe',
         verbose_name='Избранное'
     )
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
+        related_name='favorite_user',
         verbose_name='Пользователь избранного'
     )
 

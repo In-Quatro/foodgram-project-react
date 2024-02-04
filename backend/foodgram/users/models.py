@@ -6,6 +6,7 @@ username_validator = UnicodeUsernameValidator()
 
 
 class User(AbstractUser):
+    """Модель Пользователя."""
     email = models.EmailField(
         max_length=254,
         unique=True,
@@ -41,6 +42,7 @@ class User(AbstractUser):
 
 
 class Subscription(models.Model):
+    """Модель Подписки."""
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

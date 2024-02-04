@@ -1,17 +1,17 @@
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 from djoser.serializers import UserCreateSerializer, UserSerializer
-
-from users.models import User, Subscription
-from recipes.models import (
-    RecipeIngredient,
-    Recipe,
-    Tag,
-    Ingredient,
-    Favorite,
-    ShoppingCart
-)
 from drf_base64.fields import Base64ImageField
+
+from recipes.models import (
+    Favorite,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    ShoppingCart,
+    Tag
+)
+from users.models import Subscription, User
 
 
 class CustomUserReadSerializer(UserSerializer):
@@ -161,8 +161,6 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 class RecipeIngredientCreateSerializer(serializers.ModelSerializer):
     """Serializer для создания Ингредиентов с их количеством."""
     id = serializers.IntegerField()
-    # id = serializers.PrimaryKeyRelatedField(
-    #     queryset=Ingredient.objects.all())
 
     class Meta:
         model = RecipeIngredient
@@ -197,6 +195,19 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             'text',
             'cooking_time',
         )
+
+    def run_validation(self, data=serializers.empty):
+        ingredients = data.get('ingredients', [])
+        for index, ingredient in enumerate(ingredients):
+            id = ingredient.get('id')
+            try:
+                Ingredient.objects.get(pk=id)
+            except ObjectDoesNotExist:
+                raise serializers.ValidationError({
+                    'ingredients': f'Недопустимый первичный ключ "{id}"'
+                      f' - объект не существует.'})
+
+        return super().run_validation(data)
 
     def validate(self, obj):
         fields = [

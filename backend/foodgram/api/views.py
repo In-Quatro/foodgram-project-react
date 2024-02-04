@@ -1,10 +1,14 @@
 import csv
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, mixins, status
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets, status, serializers
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
 from api.serializers import (
     CustomUserReadSerializer,
     CustomUserSerializer,
@@ -16,9 +20,8 @@ from api.serializers import (
     RecipeSerializer,
     RecipeReadSerializer,
 )
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.response import Response
-from users.models import User, Subscription
+from .filter import RecipeFilter
+from .permissions import IsAdminOrReadOnlyPermission, IsAuthorPermission
 from recipes.models import (
     Recipe,
     Tag,
@@ -27,12 +30,12 @@ from recipes.models import (
     ShoppingCart,
     RecipeIngredient,
 )
+from users.models import User, Subscription
 
 
 class UsersViewSet(viewsets.ModelViewSet):
     """ViewSet для Пользователя."""
     queryset = User.objects.all()
-    # pagination_class = LimitOffsetPagination
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
@@ -119,7 +122,9 @@ class UsersViewSet(viewsets.ModelViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     """ViewSet для Рецептов."""
     queryset = Recipe.objects.all()
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthorPermission,)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
@@ -133,7 +138,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
             message_1, message_2 = 'Избранном', 'Избранного'
         elif model.__name__ == 'ShoppingCart':
             message_1, message_2 = 'Корзине', 'Корзины'
-        recipe = get_object_or_404(Recipe, id=pk)
+        try:
+            recipe = Recipe.objects.get(id=pk)
+        except ObjectDoesNotExist:
+            raise serializers.ValidationError({
+                    'recipe':
+                        f'Недопустимый первичный ключ "{pk}" '
+                        f'- объект не существует.'})
         presence_object = model.objects.filter(
             recipe=recipe,
             user=request.user).exists()
@@ -210,13 +221,14 @@ class TagViewSet(viewsets.ModelViewSet):
     """ViewSet для Тега."""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    # permission_classes = [IsAdminUser,]
-    http_method_names = ['get', 'post', 'patch', 'delete']
+    permission_classes = (IsAdminOrReadOnlyPermission,)
+    http_method_names = ('get', 'post', 'patch', 'delete')
     pagination_class = None
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
     """ViewSet для Ингредиента."""
     queryset = Ingredient.objects.all()
+    permission_classes = (IsAdminOrReadOnlyPermission,)
     serializer_class = IngredientSerializer
-    http_method_names = ['get']
+    http_method_names = ('get', 'post', 'patch', 'delete')
