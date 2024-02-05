@@ -14,6 +14,7 @@ from api.serializers import (
     CustomUserSerializer,
     RecipeCreateSerializer,
     TagSerializer,
+    IngredientInRecipeSerializer,
     IngredientSerializer,
     SubscriptionSerializer,
     SetPasswordSerializer,
@@ -221,14 +222,15 @@ class TagViewSet(viewsets.ModelViewSet):
     """ViewSet для Тега."""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = (IsAdminOrReadOnlyPermission,)
-    http_method_names = ('get', 'post', 'patch', 'delete')
+    # permission_classes = (IsAdminOrReadOnlyPermission,)
+    http_method_names = ('get',)
     pagination_class = None
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
     """ViewSet для Ингредиента."""
     queryset = Ingredient.objects.all()
-    permission_classes = (IsAdminOrReadOnlyPermission,)
+    # permission_classes = (IsAdminOrReadOnlyPermission,)
     serializer_class = IngredientSerializer
-    http_method_names = ('get', 'post', 'patch', 'delete')
+    http_method_names = ('get', )
+    pagination_class = None

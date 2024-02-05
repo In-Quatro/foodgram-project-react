@@ -95,6 +95,13 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
 class IngredientSerializer(serializers.ModelSerializer):
     """Serializer для получения Ингредиентов."""
+    class Meta:
+        model = Ingredient
+        fields = '__all__'
+
+
+class IngredientInRecipeSerializer(serializers.ModelSerializer):
+    """Serializer для получения Ингредиентов с количеством."""
     id = serializers.ReadOnlyField(
         source='ingredient.id')
     name = serializers.ReadOnlyField(
@@ -119,7 +126,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         read_only=True,)
     author = CustomUserReadSerializer(
         read_only=True,)
-    ingredients = IngredientSerializer(
+    ingredients = IngredientInRecipeSerializer(
         many=True,
         read_only=True,
         source='recipes')
@@ -197,31 +204,37 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         )
 
     def run_validation(self, data=serializers.empty):
+        tags = data.get('tags', [])
+        if len(tags) != len(set(tags)):
+            raise serializers.ValidationError({
+                'tags': f'Теги не должны '
+                        f'повторяться в рецепте.'})
         ingredients = data.get('ingredients', [])
-        for index, ingredient in enumerate(ingredients):
+        unique_ingredient = set()
+        for ingredient in ingredients:
             id = ingredient.get('id')
+            if id in unique_ingredient:
+                raise serializers.ValidationError({
+                    'ingredients': f'Ингредиенты не должны '
+                                   f'повторяться в рецепте.'})
+            unique_ingredient.add(id)
             try:
                 Ingredient.objects.get(pk=id)
             except ObjectDoesNotExist:
                 raise serializers.ValidationError({
                     'ingredients': f'Недопустимый первичный ключ "{id}"'
                       f' - объект не существует.'})
-
         return super().run_validation(data)
 
     def validate(self, obj):
         fields = [
             'ingredients',
             'tags',
-            'image',
-            'name',
-            'text',
-            'cooking_time'
         ]
         for field in fields:
             if not obj.get(field):
-                raise serializers.ValidationError(
-                    f'Поле {field} обязательное и не может быть пустым!')
+                raise serializers.ValidationError({
+                    f'{field}': f'Поле обязательное и не может быть пустым!'})
         return obj
 
     def tags_ingredients(self, recipe, tags, ingredients):
