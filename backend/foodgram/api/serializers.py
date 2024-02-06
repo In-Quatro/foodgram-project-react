@@ -207,23 +207,23 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         tags = data.get('tags', [])
         if len(tags) != len(set(tags)):
             raise serializers.ValidationError({
-                'tags': f'Теги не должны '
-                        f'повторяться в рецепте.'})
+                'tags': 'Теги не должны '
+                        'повторяться в рецепте.'})
         ingredients = data.get('ingredients', [])
         unique_ingredient = set()
         for ingredient in ingredients:
             id = ingredient.get('id')
             if id in unique_ingredient:
                 raise serializers.ValidationError({
-                    'ingredients': f'Ингредиенты не должны '
-                                   f'повторяться в рецепте.'})
+                    'ingredients': 'Ингредиенты не должны '
+                                   'повторяться в рецепте.'})
             unique_ingredient.add(id)
             try:
                 Ingredient.objects.get(pk=id)
             except ObjectDoesNotExist:
                 raise serializers.ValidationError({
                     'ingredients': f'Недопустимый первичный ключ "{id}"'
-                      f' - объект не существует.'})
+                                   f' - объект не существует.'})
         return super().run_validation(data)
 
     def validate(self, obj):
@@ -234,7 +234,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         for field in fields:
             if not obj.get(field):
                 raise serializers.ValidationError({
-                    f'{field}': f'Поле обязательное и не может быть пустым!'})
+                    f'{field}': 'Поле обязательное и не может быть пустым!'})
         return obj
 
     def tags_ingredients(self, recipe, tags, ingredients):
