@@ -300,7 +300,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     first_name = serializers.ReadOnlyField()
     last_name = serializers.ReadOnlyField()
     is_subscribed = serializers.SerializerMethodField()
-    recipes = RecipeSerializer(many=True, read_only=True)
+    recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -325,7 +325,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return False
 
     def get_recipes(self, obj):
+        request = self.context.get('request')
         recipes = obj.recipes.all()
+        limit = request.GET.get('recipes_limit')
+        if limit:
+            recipes = recipes[:int(limit)]
         serializer = RecipeSerializer(
             recipes,
             many=True,

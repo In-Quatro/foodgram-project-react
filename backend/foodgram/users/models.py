@@ -46,13 +46,13 @@ class Subscription(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='subscribeed_to',
+        related_name='subscribed_to',
         verbose_name='Подписчик'
     )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='subscribeed_by',
+        related_name='subscribed_by',
         verbose_name='Автор'
     )
 
@@ -62,5 +62,3 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f'Подписка {self.user} на {self.author}'
-
-

@@ -10,8 +10,6 @@ from .views import (
 
 v1_router = DefaultRouter()
 
-# v1_router.register('users/subscriptions', SubscriptionViewSet)
-# # http://localhost:63342/api/users/{id}/subscribe/
 v1_router.register('users', UsersViewSet)
 v1_router.register('recipes', RecipeViewSet)
 v1_router.register('tags', TagViewSet)

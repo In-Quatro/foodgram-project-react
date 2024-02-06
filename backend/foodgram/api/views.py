@@ -6,30 +6,30 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status, serializers
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from api.serializers import (
     CustomUserReadSerializer,
     CustomUserSerializer,
-    RecipeCreateSerializer,
-    TagSerializer,
-    IngredientInRecipeSerializer,
     IngredientSerializer,
-    SubscriptionSerializer,
-    SetPasswordSerializer,
-    RecipeSerializer,
+    RecipeCreateSerializer,
     RecipeReadSerializer,
+    RecipeSerializer,
+    SetPasswordSerializer,
+    SubscriptionSerializer,
+    TagSerializer,
 )
-from .filter import RecipeFilter
-from .permissions import IsAdminOrReadOnlyPermission, IsAuthorPermission
+from .filter import RecipeFilter, IngredientFilter
+from .paginations import CustomPagination
+from .permissions import IsAuthorPermission
 from recipes.models import (
-    Recipe,
-    Tag,
-    Ingredient,
     Favorite,
-    ShoppingCart,
+    Ingredient,
+    Recipe,
     RecipeIngredient,
+    ShoppingCart,
+    Tag,
 )
 from users.models import User, Subscription
 
@@ -37,6 +37,8 @@ from users.models import User, Subscription
 class UsersViewSet(viewsets.ModelViewSet):
     """ViewSet для Пользователя."""
     queryset = User.objects.all()
+    pagination_class = CustomPagination
+    permission_classes = (AllowAny,)
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
@@ -55,7 +57,7 @@ class UsersViewSet(viewsets.ModelViewSet):
             detail=False,
             permission_classes=(IsAuthenticated,))
     def set_password(self, request):
-        """Изменение пароля."""
+        """Изменение своего пароля."""
         serializer = SetPasswordSerializer(request.user, data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -64,12 +66,11 @@ class UsersViewSet(viewsets.ModelViewSet):
 
     @action(methods=['get'],
             detail=False,
-            permission_classes=(IsAuthenticated,),
-            )
+            permission_classes=(IsAuthenticated,))
     def subscriptions(self, request):
         """Просмотр своих подписок."""
-        subscribeed_by = User.objects.filter(subscribeed_by__user=request.user)
-        pages = self.paginate_queryset(subscribeed_by)
+        subscribed_by = User.objects.filter(subscribed_by__user=request.user)
+        pages = self.paginate_queryset(subscribed_by)
         serializer = SubscriptionSerializer(
             pages,
             many=True,
@@ -126,33 +127,35 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthorPermission,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
+    pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
             return RecipeReadSerializer
         return RecipeCreateSerializer
 
-    def interaction_recipe(self, request, pk, model):
+    @staticmethod
+    def interaction_recipe(request, pk, model):
         """Вспомогательный метод
         для добавления Рецепта в Избранное и Корзину."""
+        title_1, title_2 = '', ''
         if model.__name__ == 'Favorite':
-            message_1, message_2 = 'Избранном', 'Избранного'
+            title_1, title_2 = 'Избранном', 'Избранного'
         elif model.__name__ == 'ShoppingCart':
-            message_1, message_2 = 'Корзине', 'Корзины'
+            title_1, title_2 = 'Корзине', 'Корзины'
         try:
             recipe = Recipe.objects.get(id=pk)
         except ObjectDoesNotExist:
             raise serializers.ValidationError({
-                    'recipe':
-                        f'Недопустимый первичный ключ "{pk}" '
-                        f'- объект не существует.'})
+                'recipe': f'Недопустимый первичный ключ "{pk}" '
+                          f'- объект не существует.'})
         presence_object = model.objects.filter(
             recipe=recipe,
             user=request.user).exists()
         if request.method == 'POST':
             if presence_object:
                 return Response(
-                    {'errors': f'Данный рецепт уже в {message_1}!'},
+                    {'errors': f'Данный рецепт уже в {title_1}!'},
                     status=status.HTTP_400_BAD_REQUEST)
             serializer = RecipeSerializer(
                 recipe,
@@ -166,8 +169,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if request.method == 'DELETE':
             if not presence_object:
                 return Response(
-                    {'errors': f'Рецепт нельзя удалить из {message_2}, '
-                               f'поскольку его нет в {message_1}.'},
+                    {'errors': f'Рецепт нельзя удалить из {title_2}, '
+                               f'поскольку его нет в {title_1}.'},
                     status=status.HTTP_400_BAD_REQUEST)
             delete_recipe = get_object_or_404(
                 model,
@@ -176,7 +179,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
             delete_recipe.delete()
             return Response(
-                {'detail': f'Рецепт удален из {message_2}.'},
+                {'detail': f'Рецепт удален из {title_2}.'},
                 status=status.HTTP_204_NO_CONTENT)
 
     @action(methods=['post', 'delete'],
@@ -221,8 +224,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 class TagViewSet(viewsets.ModelViewSet):
     """ViewSet для Тега."""
     queryset = Tag.objects.all()
+    permission_classes = (AllowAny,)
     serializer_class = TagSerializer
-    # permission_classes = (IsAdminOrReadOnlyPermission,)
     http_method_names = ('get',)
     pagination_class = None
 
@@ -230,7 +233,9 @@ class TagViewSet(viewsets.ModelViewSet):
 class IngredientViewSet(viewsets.ModelViewSet):
     """ViewSet для Ингредиента."""
     queryset = Ingredient.objects.all()
-    # permission_classes = (IsAdminOrReadOnlyPermission,)
+    permission_classes = (AllowAny,)
     serializer_class = IngredientSerializer
     http_method_names = ('get', )
+    filter_backends = (IngredientFilter,)
+    search_fields = ('^name',)
     pagination_class = None
