@@ -2,7 +2,13 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from users.models import User
 
-from .constants import *
+from .constants import (
+    BASE_NAME_LENGTH,
+    SLUG_LENGTH,
+    TEXT_LENGTH,
+    COLOR_LENGTH,
+    MEASUREMENT_UNIT_LENGTH
+)
 
 
 class Ingredient(models.Model):

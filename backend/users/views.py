@@ -66,7 +66,7 @@ class UsersViewSet(viewsets.ModelViewSet):
         author = get_object_or_404(User, id=pk)
         if author == request.user:
             return Response(
-                {'errors': f'Запрещено подписываться на самого себя!'},
+                {'errors': 'Запрещено подписываться на самого себя!'},
                 status=status.HTTP_400_BAD_REQUEST)
         subscribe = Subscription.objects.filter(
             author=author,
