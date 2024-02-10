@@ -43,66 +43,83 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return RecipeCreateSerializer
 
     @staticmethod
-    def interaction_recipe(request, pk, model):
-        """Вспомогательный метод
-        для добавления Рецепта в Избранное и Корзину."""
-        title_1, title_2 = '', ''
-        if model.__name__ == 'Favorite':
-            title_1, title_2 = 'Избранном', 'Избранного'
-        elif model.__name__ == 'ShoppingCart':
-            title_1, title_2 = 'Корзине', 'Корзины'
+    def check_recipe(pk, request, model):
+        """Вспомогательный метод проверки Рецепта в БД."""
         try:
             recipe = Recipe.objects.get(id=pk)
         except ObjectDoesNotExist:
             raise serializers.ValidationError({
                 'recipe': f'Недопустимый первичный ключ "{pk}" '
                           f'- объект не существует.'})
-        presence_object = model.objects.filter(
+        presence_recipe = model.objects.filter(
             recipe=recipe,
             user=request.user).exists()
-        if request.method == 'POST':
-            if presence_object:
-                return Response(
-                    {'errors': f'Данный рецепт уже в {title_1}!'},
-                    status=status.HTTP_400_BAD_REQUEST)
-            serializer = RecipeSerializer(
-                recipe,
-                data=request.data,
-                context={'request': request})
-            serializer.is_valid(raise_exception=True)
-            model.objects.create(user=request.user, recipe=recipe)
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED)
-        if request.method == 'DELETE':
-            if not presence_object:
-                return Response(
-                    {'errors': f'Рецепт нельзя удалить из {title_2}, '
-                               f'поскольку его нет в {title_1}.'},
-                    status=status.HTTP_400_BAD_REQUEST)
-            delete_recipe = get_object_or_404(
-                model,
-                user=request.user,
-                recipe=recipe
-            )
-            delete_recipe.delete()
-            return Response(
-                {'detail': f'Рецепт удален из {title_2}.'},
-                status=status.HTTP_204_NO_CONTENT)
+        return recipe, presence_recipe
 
-    @action(methods=['post', 'delete'],
+    @staticmethod
+    def add_recipe(pk, request, model):
+        """Вспомогательный метод добавления Рецепта в Избранное и Корзину."""
+        recipe,  presence_recipe = RecipeViewSet.check_recipe(
+            pk, request, model
+        )
+        serializer = RecipeSerializer(
+            recipe,
+            data=request.data,
+            context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        if presence_recipe:
+            return Response(
+                {'errors': f'Данный рецепт уже добавлен!'},
+                status=status.HTTP_400_BAD_REQUEST)
+        model.objects.create(user=request.user, recipe=recipe)
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED)
+
+    @staticmethod
+    def delete_recipe(pk, request, model):
+        """Вспомогательный метод удаления Рецепта из Избранного и Корзины."""
+        recipe, presence_recipe = RecipeViewSet.check_recipe(
+            pk, request, model
+        )
+        if not presence_recipe:
+            return Response(
+                {'errors': 'Рецепт нельзя удалить, '
+                           'поскольку его нет в списке!'},
+                status=status.HTTP_400_BAD_REQUEST)
+        delete_recipe = get_object_or_404(
+            model,
+            user=request.user,
+            recipe=recipe
+        )
+        delete_recipe.delete()
+        return Response(
+            {'detail': f'Рецепт удален.'},
+            status=status.HTTP_204_NO_CONTENT)
+
+    @action(methods=['post'],
             detail=True,
             permission_classes=(IsAuthenticated,))
     def favorite(self, request, pk=None):
-        """Удалить рецепт из списка покупок."""
-        return self.interaction_recipe(request, pk, Favorite)
+        """Добавить рецепт в Избранное."""
+        return self.add_recipe(pk, request, Favorite)
 
-    @action(methods=['post', 'delete'],
+    @favorite.mapping.delete
+    def delete_favorite(self, request, pk=None):
+        """Удалить рецепт из Избранного."""
+        return self.delete_recipe(pk, request, Favorite)
+
+    @action(methods=['post'],
             detail=True,
             permission_classes=(IsAuthenticated,))
     def shopping_cart(self, request, pk=None):
-        """Добавить рецепт в список покупок."""
-        return self.interaction_recipe(request, pk, ShoppingCart)
+        """Добавить рецепт в Корзину."""
+        return self.add_recipe(pk, request, ShoppingCart)
+
+    @shopping_cart.mapping.delete
+    def delete_shopping_cart(self, request, pk=None):
+        """Удалить рецепт из Корзины."""
+        return self.delete_recipe(pk, request, ShoppingCart)
 
     @action(methods=['get'],
             detail=False,
@@ -129,13 +146,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return response
 
 
+
+
+
+
 class TagViewSet(viewsets.ModelViewSet):
     """ViewSet для Тега."""
     queryset = Tag.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = TagSerializer
     http_method_names = ('get',)
-    pagination_class = None
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
@@ -146,4 +166,3 @@ class IngredientViewSet(viewsets.ModelViewSet):
     http_method_names = ('get', )
     filter_backends = (IngredientFilter,)
     search_fields = ('^name',)
-    pagination_class = None

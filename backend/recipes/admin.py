@@ -56,6 +56,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'cooking_time',
         'pub_date',
         'is_favorites',
+        'ingredients_list',
     )
     search_fields = (
         'name',
@@ -68,7 +69,12 @@ class RecipeAdmin(admin.ModelAdmin):
 
     @admin.display(description='Число добавлений в избранное')
     def is_favorites(self, obj):
-        return obj.favorite_recipe.count()
+        return obj.favorites_recipe.count()
+
+    def ingredients_list(self, obj):
+        ingredients = obj.ingredients.all()
+        return ', '.join([ingredient.name for ingredient in ingredients])
+    ingredients_list.short_description = 'Ингредиенты'
 
 
 @admin.register(RecipeIngredient)

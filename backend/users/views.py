@@ -40,8 +40,8 @@ class UsersViewSet(viewsets.ModelViewSet):
     def set_password(self, request):
         """Изменение своего пароля."""
         serializer = SetPasswordSerializer(request.user, data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response({'detail': 'Пароль успешно изменен!'},
                         status=status.HTTP_204_NO_CONTENT)
 
@@ -58,7 +58,7 @@ class UsersViewSet(viewsets.ModelViewSet):
             context={'request': request})
         return self.get_paginated_response(serializer.data)
 
-    @action(methods=['post', 'delete'],
+    @action(methods=['post'],
             detail=True,
             permission_classes=(IsAuthenticated,))
     def subscribe(self, request, pk=None):
@@ -71,32 +71,37 @@ class UsersViewSet(viewsets.ModelViewSet):
         subscribe = Subscription.objects.filter(
             author=author,
             user=request.user).exists()
-        if request.method == 'POST':
-            if subscribe:
-                return Response(
-                    {'errors': f'Вы уже подписаны на "{author}"'},
-                    status=status.HTTP_400_BAD_REQUEST)
-            serializer = SubscriptionSerializer(
-                author,
-                data=request.data,
-                context={'request': request})
-            serializer.is_valid(raise_exception=True)
-            Subscription.objects.create(user=request.user, author=author)
+        if subscribe:
             return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED)
-        if request.method == 'DELETE':
-            if not subscribe:
-                return Response(
-                    {'errors': f'Нельзя удалить из подписок "{author}",'
-                               f'поскольку вы еще не подписаны на него!'},
-                    status=status.HTTP_400_BAD_REQUEST)
-            delete_subscribe = get_object_or_404(
-                Subscription,
-                user=request.user,
-                author=author
-            )
-            delete_subscribe.delete()
+                {'errors': f'Вы уже подписаны на "{author}"'},
+                status=status.HTTP_400_BAD_REQUEST)
+        serializer = SubscriptionSerializer(
+            author,
+            data=request.data,
+            context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        Subscription.objects.create(user=request.user, author=author)
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED)
+
+    @subscribe.mapping.delete
+    def delete_subscribe(self, request, pk=None):
+        author = get_object_or_404(User, id=pk)
+        subscribe = Subscription.objects.filter(
+            author=author,
+            user=request.user).exists()
+        if not subscribe:
             return Response(
-                {'detail': f'Вы отписались от "{author}".'},
-                status=status.HTTP_204_NO_CONTENT)
+                {'errors': f'Нельзя удалить из подписок "{author}",'
+                           f'поскольку вы еще не подписаны на него!'},
+                status=status.HTTP_400_BAD_REQUEST)
+        delete_subscribe = get_object_or_404(
+            Subscription,
+            user=request.user,
+            author=author
+        )
+        delete_subscribe.delete()
+        return Response(
+            {'detail': f'Вы отписались от "{author}".'},
+            status=status.HTTP_204_NO_CONTENT)

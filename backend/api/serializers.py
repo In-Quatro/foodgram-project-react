@@ -99,6 +99,8 @@ class TagSerializer(serializers.ModelSerializer):
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     """Serializer для связанных моделей Recipe и Ingredient."""
+    amount = serializers.IntegerField(min_value=1)
+
     class Meta:
         model = RecipeIngredient
         fields = (
@@ -144,8 +146,8 @@ class RecipeReadSerializer(AbstractModelSerializer):
         many=True,
         read_only=True,
         source='recipes')
-    is_favorited = serializers.SerializerMethodField()
-    is_in_shopping_cart = serializers.SerializerMethodField()
+    is_favorited = serializers.SerializerMethodField(read_only=True)
+    is_in_shopping_cart = serializers.SerializerMethodField(read_only=True)
     image = Base64ImageField()
 
     class Meta:
@@ -200,21 +202,19 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             'tags',
             'author',
             'ingredients',
-            'is_favorited',
-            'is_in_shopping_cart',
             'name',
             'image',
             'text',
             'cooking_time',
         )
 
-    def run_validation(self, data=serializers.empty):
-        tags = data.get('tags', [])
+    def validate(self, obj):
+        tags = obj.get('tags', [])
         if len(tags) != len(set(tags)):
             raise serializers.ValidationError({
                 'tags': 'Теги не должны '
                         'повторяться в рецепте.'})
-        ingredients = data.get('ingredients', [])
+        ingredients = obj.get('ingredients', [])
         unique_ingredient = set()
         for ingredient in ingredients:
             id = ingredient.get('id')
@@ -229,9 +229,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     'ingredients': f'Недопустимый первичный ключ "{id}"'
                                    f' - объект не существует.'})
-        return super().run_validation(data)
-
-    def validate(self, obj):
         fields = [
             'ingredients',
             'tags',

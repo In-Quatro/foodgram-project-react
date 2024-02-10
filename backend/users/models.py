@@ -2,7 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 
-from .constants import (
+from foodgram.constants import (
     USERNAME_LENGTH,
     EMAIL_LENGTH,
     FIRST_NAME_LENGTH,
@@ -40,7 +40,7 @@ class User(AbstractUser):
     )
 
     class Meta:
-        ordering = ['id']
+        ordering = ['username']
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
 
