@@ -1,24 +1,13 @@
 import os
 from pathlib import Path
 
-import environ
-
-
-env = environ.Env(
-    DEBUG=(bool, False)
-)
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-env.read_env(os.path.join(BASE_DIR, '.env'))
+SECRET_KEY = os.getenv('SECRET_KEY', 'mysecretkey')
 
-# SECRET_KEY = os.getenv('SECRET_KEY', 'mysecretkey')
-SECRET_KEY = env('SECRET_KEY')
+DEBUG = os.getenv('DEBUG', '').lower() == 'true'
 
-# DEBUG = os.getenv('DEBUG', '').lower() == 'true'
-DEBUG = env('DEBUG')
-
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
