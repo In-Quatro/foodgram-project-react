@@ -1,6 +1,8 @@
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.core.exceptions import ValidationError
 from django.db import models
+
 
 from foodgram.constants import (
     USERNAME_LENGTH,
@@ -69,3 +71,11 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f'Подписка {self.user} на {self.author}'
+
+    def clean(self):
+        if self.user == self.author:
+            raise ValidationError('Запрещено подписываться на самого себя!')
+
+        if Subscription.objects.filter(user=self.user,
+                                       author=self.author).exists():
+            raise ValidationError(f'Вы уже подписаны на "{self.author}"!')
