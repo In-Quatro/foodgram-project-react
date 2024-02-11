@@ -69,7 +69,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         if presence_recipe:
             return Response(
-                {'errors': f'Данный рецепт уже добавлен!'},
+                {'errors': 'Данный рецепт уже добавлен!'},
                 status=status.HTTP_400_BAD_REQUEST)
         model.objects.create(user=request.user, recipe=recipe)
         return Response(
@@ -94,7 +94,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
         delete_recipe.delete()
         return Response(
-            {'detail': f'Рецепт удален.'},
+            {'detail': 'Рецепт удален.'},
             status=status.HTTP_204_NO_CONTENT)
 
     @action(methods=['post'],
@@ -144,10 +144,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         response = HttpResponse(open(filename, 'rb'), content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename={filename}'
         return response
-
-
-
-
 
 
 class TagViewSet(viewsets.ModelViewSet):

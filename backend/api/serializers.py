@@ -14,27 +14,40 @@ from recipes.models import (
 from users.models import Subscription, User
 
 
-class AbstractModelSerializer(serializers.ModelSerializer):
-    """Абстрактный Serializer для моделей
-    Subscription, ShoppingCart, Favorite."""
+class BaseShoppingCartFavoriteModelSerializer(serializers.ModelSerializer):
+    """Абстрактный Serializer для моделей ShoppingCart, Favorite."""
+
     def get_field(self, obj, model):
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
-            if model.__name__ == 'Subscription':
-                return model.objects.filter(
-                    user=request.user,
-                    author=obj).exists()
-            elif model.__name__ in ('ShoppingCart', 'Favorite'):
-                return model.objects.filter(
-                    user=request.user,
-                    recipe=obj).exists()
+            return model.objects.filter(
+                user=request.user,
+                recipe=obj).exists()
         return False
 
     class Meta:
         abstract = True
 
 
-class CustomUserReadSerializer(UserSerializer, AbstractModelSerializer):
+class BaseSubscriptionModelSerializer(serializers.ModelSerializer):
+    """Абстрактный Serializer для модели Subscription."""
+
+    def get_field(self, obj):
+        request = self.context.get('request')
+        if request and not request.user.is_anonymous:
+            return Subscription.objects.filter(
+                user=request.user,
+                author=obj).exists()
+        return False
+
+    class Meta:
+        abstract = True
+
+
+class CustomUserReadSerializer(
+    UserSerializer,
+    BaseSubscriptionModelSerializer
+):
     """Serializer для получения информации о Пользователях."""
     is_subscribed = serializers.SerializerMethodField(read_only=True)
 
@@ -50,11 +63,12 @@ class CustomUserReadSerializer(UserSerializer, AbstractModelSerializer):
         )
 
     def get_is_subscribed(self, obj):
-        return self.get_field(obj, Subscription)
+        return self.get_field(obj)
 
 
 class CustomUserSerializer(UserCreateSerializer):
     """Serializer для создания Пользователя."""
+
     class Meta:
         model = User
         fields = (
@@ -92,6 +106,7 @@ class SetPasswordSerializer(serializers.Serializer):
 
 class TagSerializer(serializers.ModelSerializer):
     """Serializer для просмотра Тегов."""
+
     class Meta:
         model = Tag
         fields = '__all__'
@@ -111,6 +126,7 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
 class IngredientSerializer(serializers.ModelSerializer):
     """Serializer для получения Ингредиентов."""
+
     class Meta:
         model = Ingredient
         fields = '__all__'
@@ -135,13 +151,13 @@ class IngredientInRecipeSerializer(serializers.ModelSerializer):
         )
 
 
-class RecipeReadSerializer(AbstractModelSerializer):
+class RecipeReadSerializer(BaseShoppingCartFavoriteModelSerializer):
     """Serializer для получения списка рецептов."""
     tags = TagSerializer(
         many=True,
-        read_only=True,)
+        read_only=True, )
     author = CustomUserReadSerializer(
-        read_only=True,)
+        read_only=True, )
     ingredients = IngredientInRecipeSerializer(
         many=True,
         read_only=True,
@@ -164,6 +180,14 @@ class RecipeReadSerializer(AbstractModelSerializer):
             'text',
             'cooking_time',
         )
+
+    def get_field(self, obj, model):
+        request = self.context.get('request')
+        if request and not request.user.is_anonymous:
+            return model.objects.filter(
+                user=request.user,
+                recipe=obj).exists()
+        return False
 
     def get_is_favorited(self, obj):
         return self.get_field(obj, Favorite)
@@ -192,7 +216,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         queryset=Tag.objects.all(),
     )
     author = CustomUserReadSerializer(read_only=True)
-    ingredients = RecipeIngredientCreateSerializer(many=True,)
+    ingredients = RecipeIngredientCreateSerializer(many=True, )
     image = Base64ImageField()
 
     class Meta:
@@ -302,7 +326,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
 
 
-class SubscriptionSerializer(AbstractModelSerializer):
+class SubscriptionSerializer(BaseSubscriptionModelSerializer):
     """Serializer для Подписок."""
     email = serializers.ReadOnlyField()
     username = serializers.ReadOnlyField()
@@ -326,7 +350,7 @@ class SubscriptionSerializer(AbstractModelSerializer):
         )
 
     def get_is_subscribed(self, obj):
-        return self.get_field(obj, Subscription)
+        return self.get_field(obj)
 
     def get_recipes(self, obj):
         request = self.context.get('request')
