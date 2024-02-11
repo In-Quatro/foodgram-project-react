@@ -1,4 +1,5 @@
 import csv
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Sum
 from django.http import HttpResponse
@@ -59,7 +60,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @staticmethod
     def add_recipe(pk, request, model):
         """Вспомогательный метод добавления Рецепта в Избранное и Корзину."""
-        recipe,  presence_recipe = RecipeViewSet.check_recipe(
+        recipe, presence_recipe = RecipeViewSet.check_recipe(
             pk, request, model
         )
         serializer = RecipeSerializer(
