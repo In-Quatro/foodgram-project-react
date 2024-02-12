@@ -17,6 +17,9 @@ from users.models import Subscription, User
 class BaseShoppingCartFavoriteModelSerializer(serializers.ModelSerializer):
     """Абстрактный Serializer для моделей ShoppingCart, Favorite."""
 
+    class Meta:
+        abstract = True
+
     def get_field(self, obj, model):
         request = self.context.get('request')
         if request and not request.user.is_anonymous:
@@ -25,12 +28,12 @@ class BaseShoppingCartFavoriteModelSerializer(serializers.ModelSerializer):
                 recipe=obj).exists()
         return False
 
-    class Meta:
-        abstract = True
-
 
 class BaseSubscriptionModelSerializer(serializers.ModelSerializer):
     """Абстрактный Serializer для модели Subscription."""
+
+    class Meta:
+        abstract = True
 
     def get_field(self, obj):
         request = self.context.get('request')
@@ -39,9 +42,6 @@ class BaseSubscriptionModelSerializer(serializers.ModelSerializer):
                 user=request.user,
                 author=obj).exists()
         return False
-
-    class Meta:
-        abstract = True
 
 
 class CustomUserReadSerializer(

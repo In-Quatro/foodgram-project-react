@@ -23,7 +23,7 @@ class Ingredient(models.Model):
     )
 
     class Meta:
-        ordering = ['name']
+        ordering = ('name',)
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
         constraints = [
@@ -46,6 +46,7 @@ class Tag(models.Model):
     )
     color = ColorField(
         default='#FF0000',
+        verbose_name='Цвет'
     )
     slug = models.SlugField(
         max_length=SLUG_LENGTH,
@@ -112,7 +113,7 @@ class Recipe(models.Model):
     )
 
     class Meta:
-        ordering = ['name']
+        ordering = ('name',)
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
 
@@ -181,6 +182,12 @@ class Favorite(BaseFovoriteShoppingCart):
         verbose_name = 'Избранный рецепт'
         verbose_name_plural = 'Избранные рецепты'
         default_related_name = 'favorites_recipe'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recipe', 'user'],
+                name='unique_recipe_user_favorite'
+            )
+        ]
 
     def __str__(self):
         return f'{self.recipe.name}'
@@ -192,6 +199,12 @@ class ShoppingCart(BaseFovoriteShoppingCart):
         verbose_name = 'Корзина для покупок'
         verbose_name_plural = 'Корзины для покупок'
         default_related_name = 'recipes_in_cart'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recipe', 'user'],
+                name='unique_recipe_user_cart'
+            )
+        ]
 
     def __str__(self):
         return (f'Пользователь "{self.user.username}" '

@@ -1,5 +1,6 @@
 from django.contrib import admin
 
+
 from recipes.models import (
     Recipe,
     Ingredient,
@@ -45,6 +46,13 @@ class TagAdmin(admin.ModelAdmin):
     )
 
 
+class RecipeIngredientInline(admin.StackedInline):
+    """Inline для редактирования добавления и
+    редактирования ингредиентов внутри рецепта."""
+    model = RecipeIngredient
+    extra = 1
+
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     """Админ-зона Рецептов."""
@@ -66,15 +74,16 @@ class RecipeAdmin(admin.ModelAdmin):
         'author',
         'tags',
     )
+    inlines = [RecipeIngredientInline]
 
     @admin.display(description='Число добавлений в избранное')
     def is_favorites(self, obj):
         return obj.favorites_recipe.count()
 
+    @admin.display(description='Ингредиенты')
     def ingredients_list(self, obj):
         ingredients = obj.ingredients.all()
         return ', '.join([ingredient.name for ingredient in ingredients])
-    ingredients_list.short_description = 'Ингредиенты'
 
 
 @admin.register(RecipeIngredient)

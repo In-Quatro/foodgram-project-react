@@ -24,15 +24,13 @@ class UserAdmin(admin.ModelAdmin):
         'email',
     )
 
+    @admin.display(description='Кол-во подписчиков')
     def get_subscribe_count(self, obj):
         return obj.subscribed_to.count()
 
-    get_subscribe_count.short_description = 'Кол-во подписчиков'
-
+    @admin.display(description='Кол-во рецептов')
     def get_recipe_count(self, obj):
         return obj.recipes.count()
-
-    get_recipe_count.short_description = 'Кол-во рецептов'
 
 
 @admin.register(Subscription)
